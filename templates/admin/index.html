@@ -1,0 +1,43 @@
+{% extends "admin/index.html" %}
+{% load storage_tags %}
+
+{% block content %}
+    <div style="margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #333; font-size: 1.2rem; border-bottom: 1px solid #eee; padding-bottom: 10px;">Storage Capacity</h2>
+        {% get_storage_stats as stats %}
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+            <div>
+                <strong>Platform Usage:</strong> <span style="color: #28a745; font-weight: bold;">{{ stats.app_used_str }}</span>
+            </div>
+            <div>
+                <strong>System Disk:</strong> {{ stats.disk_used_str }} / {{ stats.disk_total_str }}
+            </div>
+        </div>
+        
+        <div style="width: 100%; background-color: #e9ecef; border-radius: 6px; height: 24px; overflow: hidden; position: relative; border: 1px solid #ddd;">
+            <!-- System Used -->
+            <div style="width: {{ stats.total_used_percentage }}%; background-color: #ffc107; height: 100%; position: absolute; top: 0; left: 0;" title="System Used: {{ stats.total_used_percentage|floatformat:1 }}%"></div>
+            
+            <!-- App Used -->
+            <div style="width: {{ stats.app_percentage }}%; background-color: #28a745; height: 100%; position: absolute; top: 0; left: 0;" title="Platform Used: {{ stats.app_percentage|floatformat:1 }}%"></div>
+        </div>
+        
+        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 12px; height: 12px; background-color: #28a745; border-radius: 2px;"></div>
+                Platform Files
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 12px; height: 12px; background-color: #ffc107; border-radius: 2px;"></div>
+                System Other
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 12px; height: 12px; background-color: #e9ecef; border-radius: 2px; border: 1px solid #ddd;"></div>
+                Free Space ({{ stats.disk_free_str }})
+            </div>
+        </div>
+    </div>
+    
+    {{ block.super }}
+{% endblock %}
