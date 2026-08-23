@@ -4,7 +4,7 @@ A robust, full-stack file sharing platform engineered for large-scale file trans
 
 ---
 
-## 🏛️ Architecture Overview
+## Architecture Overview
 
 The system is designed with a decoupled, event-driven architecture, separating the metadata management from the actual heavy-lifting of file transfers.
 
@@ -15,7 +15,7 @@ The system is designed with a decoupled, event-driven architecture, separating t
 
 ---
 
-## 🛠️ Key Implementation Techniques
+## Key Implementation Techniques
 
 ### 1. Resumable, Chunk-Based Transfers (Client-Side)
 To handle gigabyte-plus file sizes without exhausting memory or failing on dropped connections, the frontend implements a sophisticated chunking engine:
@@ -41,7 +41,7 @@ The dashboard features a real-time, segmented storage usage indicator.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 file-sharing/
@@ -61,7 +61,7 @@ file-sharing/
     └── templates/              # HTML templates
 ```
 
-## 🗺️ Architecture Workflow
+## Architecture Workflow
 
 ```mermaid
 graph TD
@@ -82,7 +82,7 @@ graph TD
     class DB db;
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 1. **Navigate to the Backend Directory**: `cd backend`
 2. **Install Dependencies**: `pip install -r requirements.txt`
