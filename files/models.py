@@ -14,8 +14,7 @@ class ServerNode(models.Model):
 class File(models.Model):
     class Visibility(models.TextChoices):
         PRIVATE = "PRIVATE", "Private"
-        PUBLIC_VIEW = "PUBLIC_VIEW", "Public - View Only"
-        PUBLIC_EDIT = "PUBLIC_EDIT", "Public - Editable"
+        PUBLIC = "PUBLIC", "Public"
 
     original_name = models.CharField(max_length=255)
     stored_name = models.CharField(max_length=255, unique=True)

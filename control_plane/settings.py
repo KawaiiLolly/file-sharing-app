@@ -50,6 +50,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'users.middleware.ActivityLogMiddleware',
 ]
 
 ROOT_URLCONF = 'control_plane.urls'
@@ -118,6 +119,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 
 # Email
@@ -132,3 +136,7 @@ MAILERS = {
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = 'dashboard'
 DATA_UPLOAD_MAX_NUMBER_FILES = None
+
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailBackend',
+]

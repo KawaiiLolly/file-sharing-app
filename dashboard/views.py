@@ -123,6 +123,20 @@ def file_download_view(request, file_id):
     return response
 
 @login_required
+def file_preview_view(request, file_id):
+    file_obj = get_object_or_404(File, id=file_id)
+    
+    if not PolicyEngine.can_read(request.user, file_obj):
+        return HttpResponseForbidden("You do not have permission to view this file.")
+        
+    file_path = os.path.join(settings.UPLOADS_DIR, file_obj.stored_name)
+    
+    if not os.path.exists(file_path):
+        raise Http404("File not found on server storage.")
+        
+    return FileResponse(open(file_path, 'rb'))
+
+@login_required
 def web_upload_view(request):
     from django.http import JsonResponse
     from bridge.ipc import DjangoBridge

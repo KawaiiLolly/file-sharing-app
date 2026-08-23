@@ -9,10 +9,7 @@ class PolicyEngine:
         if file_obj.owner == user:
             return True
             
-        return file_obj.visibility in {
-            File.Visibility.PUBLIC_VIEW,
-            File.Visibility.PUBLIC_EDIT,
-        }
+        return file_obj.visibility == File.Visibility.PUBLIC
 
     @staticmethod
     def can_write(user, file_obj) -> bool:
@@ -22,4 +19,4 @@ class PolicyEngine:
         if file_obj.owner == user:
             return True
             
-        return file_obj.visibility == File.Visibility.PUBLIC_EDIT
+        return False

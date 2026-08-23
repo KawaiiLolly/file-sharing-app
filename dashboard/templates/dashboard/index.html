@@ -1,10 +1,11 @@
 {% load storage_tags %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Share Web.</title>
+    <title>File Share</title>
     <style>
         :root {
             --bg-main: #141414;
@@ -19,109 +20,546 @@
             --font-family: 'Inter', -apple-system, sans-serif;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { font-family: var(--font-family); background-color: var(--bg-main); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
 
         /* SIDEBAR */
-        .sidebar { width: 260px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; flex-shrink: 0; }
-        .sidebar-brand { font-size: 20px; font-weight: 700; padding: 0 20px; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
-        .sidebar-group { margin-bottom: 25px; }
-        .sidebar-title { font-size: 11px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; padding: 0 20px; letter-spacing: 0.5px; font-weight: 600; }
-        .sidebar-nav { list-style: none; }
-        .sidebar-nav li a { display: flex; align-items: center; gap: 12px; padding: 10px 20px; color: var(--text-primary); text-decoration: none; font-size: 14px; transition: background 0.2s; }
-        .sidebar-nav li a:hover { background-color: var(--bg-card); }
-        .sidebar-nav li.active a { background-color: #333; font-weight: 500; border-radius: 8px; margin: 0 10px; padding: 10px; }
-        .sidebar-footer { margin-top: auto; padding: 20px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
-        
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            padding: 0 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-group {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            padding: 0 20px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .sidebar-nav li a:hover {
+            background-color: var(--bg-card);
+        }
+
+        .sidebar-nav li.active a {
+            background-color: #292929;
+            font-weight: 500;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         /* MAIN CONTENT */
-        .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; display: flex; flex-direction: column; }
-        
-        .welcome-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
-        .welcome-title { font-size: 28px; font-weight: 600; margin-bottom: 5px; }
-        .welcome-subtitle { color: var(--text-secondary); font-size: 14px; }
-        
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .welcome-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
         /* Segmented Storage Bar */
-        .storage-widget { width: 400px; }
-        .storage-widget-header { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
-        .storage-bar-container { height: 12px; background: #333; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 10px; }
-        .storage-segment { height: 100%; transition: width 0.3s; }
-        .storage-legend { display: flex; gap: 15px; font-size: 11px; color: var(--text-secondary); flex-wrap: wrap; }
-        .legend-item { display: flex; align-items: center; gap: 5px; }
-        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .storage-widget {
+            width: 400px;
+        }
+
+        .storage-widget-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .storage-bar-container {
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            display: flex;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .storage-segment {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .storage-legend {
+            display: flex;
+            gap: 15px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
 
         /* Search & Breadcrumb */
-        .content-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .breadcrumb { font-size: 18px; font-weight: 600; }
-        .search-box { position: relative; }
-        .search-box input { background: var(--bg-card); border: 1px solid var(--border-color); color: white; padding: 8px 15px 8px 35px; border-radius: 20px; width: 250px; outline: none; transition: border 0.2s; }
-        .search-box input:focus { border-color: var(--accent); }
-        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; }
-        
+        .content-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px 15px 8px 35px;
+            border-radius: 20px;
+            width: 250px;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--text-secondary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+        }
+
         /* Category Cards */
-        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .cat-card { background: var(--bg-card); padding: 15px; border-radius: 12px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: background 0.2s, transform 0.1s; border: 1px solid var(--border-color); }
-        .cat-card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
-        .active-cat { border-color: var(--accent); background: var(--bg-card-hover); box-shadow: 0 0 0 1px var(--accent); }
-        .cat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .cat-info h3 { font-size: 15px; margin-bottom: 3px; font-weight: 500; }
-        .cat-info p { font-size: 12px; color: var(--text-secondary); }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .cat-card {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            border: 1px solid var(--border-color);
+        }
+
+        .cat-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .active-cat {
+            border-color: var(--accent);
+            background: var(--bg-card-hover);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .cat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .cat-info h3 {
+            font-size: 15px;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+
+        .cat-info p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
 
         /* ACTION PANEL */
-        .action-panel { width: 380px; background-color: var(--bg-panel); border-left: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
-        .panel-card { background: var(--bg-card); border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); }
-        .panel-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .action-panel {
+            width: 380px;
+            background-color: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-card {
+            /* background: var(--bg-card); */
+            border-radius: 12px;
+            padding: 15px;
+            /* border: 1px solid var(--border-color); */
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
         /* Shared Files List */
-        .file-list { display: flex; flex-direction: column; gap: 10px; }
-        .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-radius: 8px; transition: background 0.2s; }
-        .file-item:hover { background: var(--bg-card-hover); }
-        .file-meta { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
-        .file-icon { width: 36px; height: 36px; border-radius: 8px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-        .file-name { font-size: 14px; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .file-date { font-size: 11px; color: var(--text-secondary); }
-        .file-size { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .file-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
 
         /* Dropzone */
-        .dropzone { border: 2px dashed #444; border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; transition: border 0.2s, background 0.2s; position: relative; }
-        .dropzone:hover { border-color: var(--accent); background: rgba(0, 122, 255, 0.05); }
-        .dropzone-icon { font-size: 30px; margin-bottom: 10px; }
-        .dropzone-text { font-size: 14px; font-weight: 500; margin-bottom: 5px; }
-        .dropzone-subtext { font-size: 11px; color: var(--text-secondary); }
-        
-        .upload-controls { margin-top: 15px; }
-        select { background: #333; color: white; border: 1px solid #444; padding: 8px; border-radius: 6px; width: 100%; outline: none; margin-bottom: 10px; }
+        .dropzone {
+            border: 2px dashed #444;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: border 0.2s, background 0.2s;
+            position: relative;
+        }
 
-        .progress-bar-bg { width: 100%; background: #333; border-radius: 4px; height: 6px; overflow: hidden; margin-top: 10px; }
-        .progress-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
-        
-        .dl-btn { background: #333; color: white; border: none; padding: 6px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
-        .dl-btn:hover { background: var(--accent); }
+        .dropzone:hover {
+            border-color: var(--accent);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .dropzone-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .dropzone-text {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .dropzone-subtext {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .upload-controls {
+            margin-top: 15px;
+        }
+
+        select {
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 6px;
+            width: 100%;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            background: #333;
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--text-secondary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .dl-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .dl-btn:hover {
+            background: var(--accent);
+        }
+
+        /* Masonry Grid */
+        .masonry-grid {
+            column-count: 3;
+            column-gap: 3px;
+        }
+
+        @media (max-width: 1400px) {
+            .masonry-grid {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .masonry-grid {
+                column-count: 1;
+            }
+        }
+
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 3px;
+            background: var(--bg-card);
+            border-radius: 0px;
+            overflow: hidden;
+            position: relative;
+            /* border: 1px solid var(--border-color); */
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        /* .masonry-item:hover { */
+        /* transform: translateY(-2px); */
+        /* box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); */
+        /* } */
+
+        .masonry-item img,
+        .masonry-item video {
+            width: 100%;
+            display: block;
+            object-fit: cover;
+            min-height: 100px;
+            /* fallback for empty content */
+            background-color: #000;
+        }
+
+        .masonry-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+            padding: 20px 15px 15px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            /* Let hover events pass to buttons */
+        }
+
+        .masonry-item:hover .masonry-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .masonry-info {
+            min-width: 0;
+            flex: 1;
+            padding-right: 10px;
+        }
+
+        .masonry-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
+
 <body>
-    
+
     <div class="sidebar">
         <div class="sidebar-brand">
-            <span style="color: #a855f7; font-size: 24px;">▶</span> Share Web.
+            File Share
         </div>
         <div class="sidebar-group">
             <div class="sidebar-title">Favorite</div>
             <ul class="sidebar-nav">
-                <li class="{% if not show_favorites %}active{% endif %}"><a href="/">📁 Mine Space</a></li>
-                <li class="{% if show_favorites %}active{% endif %}"><a href="/?favorites=true">⭐ Favorites</a></li>
+                <li class="{% if not show_favorites %}active{% endif %}"><a href="/">Personal</a></li>
+                <li class="{% if show_favorites %}active{% endif %}"><a href="/?favorites=true">Favorites</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-group">
+            <div class="sidebar-title">Categories</div>
+            <ul class="sidebar-nav">
+                <li class="{% if not category_filter and not show_favorites %}active{% endif %}"><a href="?all=true">
+                        All Files</a></li>
+                {% for name, data in sorted_categories %}
+                <li class="{% if category_filter == name %}active{% endif %}">
+                    <a href="?category={{ name }}">{{ name }}</a>
+                </li>
+                {% endfor %}
             </ul>
         </div>
 
         <div class="sidebar-footer">
-            <div style="width: 36px; height: 36px; border-radius: 50%; background: #007aff; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">{{ request.user.username|make_list|first|upper }}</div>
+            <div
+                style="width: 36px; height: 36px; border-radius: 50%; background: #007aff; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">
+                {{ request.user.username|make_list|first|upper }}</div>
             <div style="min-width: 0;">
-                <div style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ request.user.username }}</div>
-                <div style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ request.user.email|default:"Logged in" }}</div>
+                <div
+                    style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ request.user.username }}</div>
+                <div
+                    style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ request.user.email|default:"Logged in" }}</div>
             </div>
             <form action="{% url 'logout' %}" method="post" style="margin-left: auto; flex-shrink: 0;">
                 {% csrf_token %}
-                <button type="submit" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px;" title="Logout">⏻</button>
+                <button type="submit"
+                    style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px;"
+                    title="Logout">⏻</button>
             </form>
         </div>
     </div>
@@ -129,10 +567,10 @@
     <div class="main-content">
         <div class="welcome-header">
             <div>
-                <h1 class="welcome-title">Welcome to {{ request.user.username|title }} !</h1>
-                <div class="welcome-subtitle">👋 Files Dashboard</div>
+                <!-- <h1 class="welcome-title">Welcome to {{ request.user.username|title }} !</h1> -->
+                <div class="welcome-subtitle">Files Dashboard</div>
             </div>
-            
+
             <div class="storage-widget">
                 {% get_storage_stats as stats %}
                 <div class="storage-widget-header">
@@ -141,42 +579,83 @@
                 </div>
                 <div class="storage-bar-container">
                     {% for name, data in sorted_categories %}
-                        {% if data.percentage > 0 %}
-                        <div class="storage-segment" style="width: {{ data.percentage }}%; background-color: {{ data.color }};" title="{{ name }}: {{ data.percentage|floatformat:1 }}%"></div>
-                        {% endif %}
+                    {% if data.percentage > 0 %}
+                    <div class="storage-segment"
+                        style="width: {{ data.percentage }}%; background-color: {{ data.color }};"
+                        title="{{ name }}: {{ data.percentage|floatformat:1 }}%"></div>
+                    {% endif %}
                     {% endfor %}
                     <div class="storage-segment" style="flex: 1; background-color: #333;"></div>
                 </div>
                 <div class="storage-legend">
                     {% for name, data in categories.items %}
-                    <div class="legend-item" title="{{ data.size|filesizeformat }}"><span class="legend-dot" style="background: {{ data.color }};"></span> {{ name }}</div>
+                    <div class="legend-item" title="{{ data.size|filesizeformat }}"><span class="legend-dot"
+                            style="background: {{ data.color }};"></span> {{ name }}</div>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
         <div class="content-toolbar">
-            <div class="breadcrumb">Recent shares <span style="color: #666; font-size: 14px; font-weight: 400; margin: 0 5px;">&rsaquo;</span> <span style="font-size: 14px; font-weight: 400;">Documents - Local</span></div>
+            <div class="breadcrumb">Recent shares <span
+                    style="color: #666; font-size: 14px; font-weight: 400; margin: 0 5px;">&rsaquo;</span> <span
+                    style="font-size: 14px; font-weight: 400;">Documents - Local</span></div>
             <div class="search-box">
                 <form method="GET" action="">
-                    <span class="search-icon">🔍</span>
+                    <!-- <span class="search-icon"></span> -->
                     <input type="text" name="q" placeholder="Search files..." value="{{ search_query }}">
                 </form>
             </div>
         </div>
 
         <div class="panel-card" style="margin-bottom: 30px;">
-            <div class="panel-title">Share files <a href="?all=true" style="font-size: 12px; color: var(--text-secondary); font-weight: 400; cursor: pointer; text-decoration: none;">All files &rsaquo;</a></div>
+            <div class="panel-title">Share files <a href="?all=true"
+                    style="font-size: 12px; color: var(--text-secondary); font-weight: 400; cursor: pointer; text-decoration: none;">All
+                    files &rsaquo;</a></div>
+            {% if category_filter in "Photo,Video" %}
+            <div class="masonry-grid">
+                {% for file in recent_shares %}
+                <div class="masonry-item">
+                    {% if category_filter == "Video" %}
+                    <video src="{% url 'file_preview' file.id %}" preload="metadata" muted loop
+                        onmouseover="this.play()" onmouseout="this.pause()"></video>
+                    {% else %}
+                    <img src="{% url 'file_preview' file.id %}" loading="lazy" alt="{{ file.original_name }}">
+                    {% endif %}
+                    <div class="masonry-overlay">
+                        <div class="masonry-info">
+                            <div class="file-name" style="color: white; margin-bottom: 2px;"
+                                title="{{ file.original_name }}">{{ file.original_name }}</div>
+                            <div class="file-size" style="color: #bbb;">{{ file.size|filesizeformat }}</div>
+                        </div>
+                        <div class="masonry-actions">
+                            <span class="favorite-star" onclick="toggleFavorite('{{ file.id }}', this)"
+                                style="cursor: pointer; font-size: 16px; margin: 0 5px;" title="Toggle Favorite">
+                                {% if file.is_favorite %}⭐{% else %}☆{% endif %}
+                            </span>
+                            <button class="dl-btn" title="Download"
+                                onclick="startDownload('{{ file.id }}', '{{ file.original_name }}', {{ file.size }})">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 20px;">No files
+                    uploaded yet</div>
+                {% endfor %}
+            </div>
+            {% else %}
             <div class="file-list">
                 {% for file in recent_shares %}
                 <div class="file-item">
                     <div class="file-meta">
-                        <div class="file-icon">
-                            {% if 'image' in file.content_type %}🖼️
-                            {% elif 'video' in file.content_type %}🎥
-                            {% elif 'pdf' in file.content_type %}📄
-                            {% else %}📁{% endif %}
-                        </div>
                         <div style="min-width: 0;">
                             <div class="file-name" title="{{ file.original_name }}">{{ file.original_name }}</div>
                             <div class="file-date">{{ file.created_at|date:"n/j/y H:i" }}</div>
@@ -184,29 +663,31 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                         <div class="file-size">{{ file.size|filesizeformat }}</div>
-                        <span class="favorite-star" onclick="toggleFavorite('{{ file.id }}', this)" style="cursor: pointer; font-size: 16px; margin: 0 5px;" title="Toggle Favorite">{% if file.is_favorite %}⭐{% else %}☆{% endif %}</span>
-                        <button class="dl-btn" title="Download" onclick="startDownload('{{ file.id }}', '{{ file.original_name }}', {{ file.size }})">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span class="favorite-star" onclick="toggleFavorite('{{ file.id }}', this)"
+                            style="cursor: pointer; font-size: 16px; margin: 0 5px;" title="Toggle Favorite">
+                            {% if file.is_favorite %}⭐{% else %}☆{% endif %}
+                        </span>
+                        <button class="dl-btn" title="Download"
+                            onclick="startDownload('{{ file.id }}', '{{ file.original_name }}', {{ file.size }})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
                         </button>
                     </div>
                 </div>
                 {% empty %}
-                <div style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 20px;">No files uploaded yet</div>
+                <div style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 20px;">No files
+                    uploaded yet</div>
                 {% endfor %}
             </div>
+            {% endif %}
         </div>
 
-        <div class="category-grid">
-            {% for name, data in sorted_categories %}
-            <div class="cat-card {% if category_filter == name %}active-cat{% endif %}" onclick="window.location.href='?category={{ name }}'">
-                <div class="cat-icon" style="background: {{ data.color }}33; color: {{ data.color }};">{{ data.icon }}</div>
-                <div class="cat-info">
-                    <h3>{{ name }}</h3>
-                    <p>{{ data.count }} items • {{ data.size|filesizeformat }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+
     </div>
 
     <div class="action-panel">
@@ -222,36 +703,46 @@
             <div class="panel-title">Upload file</div>
             <form id="uploadForm" action="{% url 'web_upload' %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                
+
                 <div class="dropzone" id="dropzone">
-                    <div class="dropzone-icon">☁️</div>
+                    <!-- <div class="dropzone-icon">☁️</div> -->
                     <div class="dropzone-text">Drag and drop file to upload</div>
                     <div class="dropzone-subtext" style="margin-top: 10px;">
-                        <span onclick="document.getElementById('fileInput').click()" style="color: var(--accent); cursor: pointer; text-decoration: underline;">Browse Files</span> or 
-                        <span onclick="document.getElementById('folderInput').click()" style="color: var(--accent); cursor: pointer; text-decoration: underline;">Browse Folders</span>
+                        <span onclick="document.getElementById('fileInput').click()"
+                            style="color: var(--text-secondary); cursor: pointer; text-decoration: underline;">Browse
+                            Files</span> or
+                        <span onclick="document.getElementById('folderInput').click()"
+                            style="color: var(--text-secondary); cursor: pointer; text-decoration: underline;">Browse
+                            Folders</span>
                     </div>
                     <input type="file" id="fileInput" name="file" multiple style="display: none;">
-                    <input type="file" id="folderInput" name="file" multiple webkitdirectory directory style="display: none;">
-                </div>
-                
-                <div class="upload-controls">
-                    <select name="visibility">
-                        <option value="PRIVATE">Private (Only you & admins)</option>
-                        <option value="PUBLIC_VIEW">Public View (Others can download)</option>
-                        <option value="PUBLIC_EDIT">Public Edit (Others can modify)</option>
-                    </select>
-                    <button type="submit" id="uploadBtn" style="width: 100%; background: #4caf50; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer;">Start Upload</button>
+                    <input type="file" id="folderInput" name="file" multiple webkitdirectory directory
+                        style="display: none;">
                 </div>
 
-                <div id="uploadProgressContainer" style="display: none; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <div class="upload-controls">
+                    <select name="visibility">
+                        <option value="PRIVATE">Private</option>
+                        <option value="PUBLIC">Public</option>
+                    </select>
+                    <button type="submit" id="uploadBtn"
+                        style="width: 100%; background: #4caf50; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer;">Start
+                        Upload</button>
+                </div>
+
+                <div id="uploadProgressContainer"
+                    style="display: none; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                         <div class="file-name" id="uploadingFileName" style="font-size: 13px;">Uploading...</div>
                         <div style="font-size: 12px;" id="uploadPercent">0%</div>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="uploadProgressBar" class="progress-bar-fill"></div>
                     </div>
-                    <button type="button" id="cancelUploadBtn" style="width: 100%; margin-top: 10px; background: transparent; color: #dc3545; border: 1px solid #dc3545; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.2s;">Cancel Upload</button>
+                    <button type="button" id="cancelUploadBtn"
+                        style="width: 100%; margin-top: 10px; background: transparent; color: #dc3545; border: 1px solid #dc3545; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.2s;">Cancel
+                        Upload</button>
                 </div>
             </form>
         </div>
@@ -275,24 +766,24 @@
         }
 
         ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = "var(--accent)", false);
+            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = "var(--text-secondary)", false);
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
             dropzone.addEventListener(eventName, () => dropzone.style.borderColor = "#444", false);
         });
 
-        dropzone.addEventListener('drop', function(e) {
+        dropzone.addEventListener('drop', function (e) {
             let dt = e.dataTransfer;
             let files = dt.files;
             fileInput.files = files; // Assign files to input
-            if(files.length > 0) {
+            if (files.length > 0) {
                 document.querySelector('.dropzone-text').innerText = `${files.length} file(s) selected`;
             }
         });
 
-        fileInput.addEventListener('change', function() {
-            if(this.files.length > 0) {
+        fileInput.addEventListener('change', function () {
+            if (this.files.length > 0) {
                 document.querySelector('.dropzone-text').innerText = `${this.files.length} file(s) selected`;
             }
         });
@@ -302,38 +793,38 @@
         // ==========================================
         let currentUploadXhr = null;
 
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        document.getElementById('uploadForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             const form = this;
             const submitBtn = document.getElementById('uploadBtn');
             const progressContainer = document.getElementById('uploadProgressContainer');
             const progressBar = document.getElementById('uploadProgressBar');
             const progressText = document.getElementById('uploadPercent');
-            
+
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.5';
             progressContainer.style.display = 'block';
-            
+
             const formData = new FormData(form);
             const xhr = new XMLHttpRequest();
             currentUploadXhr = xhr;
-            
-            document.getElementById('cancelUploadBtn').onclick = function() {
+
+            document.getElementById('cancelUploadBtn').onclick = function () {
                 if (currentUploadXhr) currentUploadXhr.abort();
             };
-            
+
             xhr.open('POST', form.action, true);
-            
-            xhr.upload.addEventListener('progress', function(e) {
+
+            xhr.upload.addEventListener('progress', function (e) {
                 if (e.lengthComputable) {
                     const percentComplete = Math.round((e.loaded / e.total) * 100);
                     progressBar.style.width = percentComplete + '%';
                     progressText.textContent = percentComplete + '%';
                 }
             });
-            
-            xhr.onload = function() {
+
+            xhr.onload = function () {
                 try {
                     const response = JSON.parse(xhr.responseText);
                     if (xhr.status === 200) {
@@ -343,24 +834,24 @@
                         alert("Upload failed: " + (response.message || "Unknown error."));
                         resetForm();
                     }
-                } catch(err) {
+                } catch (err) {
                     alert("Upload failed with server error status " + xhr.status);
                     resetForm();
                 }
             };
-            
-            xhr.onabort = function() {
+
+            xhr.onabort = function () {
                 alert("Upload was canceled. No files were saved.");
                 resetForm();
             };
-            
-            xhr.onerror = function() {
+
+            xhr.onerror = function () {
                 alert("An error occurred while uploading. Please check your network connection.");
                 resetForm();
             };
-            
+
             xhr.send(formData);
-            
+
             function resetForm() {
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
@@ -379,15 +870,15 @@
         const DB_VERSION = 1;
         const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
         let db;
-        const activeDownloads = {}; 
+        const activeDownloads = {};
 
         const requestDB = indexedDB.open(DB_NAME, DB_VERSION);
-        requestDB.onupgradeneeded = function(e) {
+        requestDB.onupgradeneeded = function (e) {
             db = e.target.result;
             if (!db.objectStoreNames.contains('chunks')) db.createObjectStore('chunks', { keyPath: ['fileId', 'chunkIndex'] });
             if (!db.objectStoreNames.contains('metadata')) db.createObjectStore('metadata', { keyPath: 'fileId' });
         };
-        requestDB.onsuccess = function(e) {
+        requestDB.onsuccess = function (e) {
             db = e.target.result;
             loadPendingDownloads();
         };
@@ -426,33 +917,33 @@
         async function resumeDownload(fileId) {
             const meta = await getMetadata(fileId);
             if (!meta) return;
-            
+
             meta.status = 'downloading';
             await saveMetadata(meta);
             updateDownloadUIStatus(fileId, 'downloading');
-            
+
             activeDownloads[fileId] = { paused: false, controller: new AbortController() };
             let downloadedBytes = meta.downloadedBytes || 0;
             let chunkIndex = Math.floor(downloadedBytes / CHUNK_SIZE);
-            
+
             while (downloadedBytes < meta.fileSize && !activeDownloads[fileId].paused) {
                 const start = downloadedBytes;
                 const end = Math.min(start + CHUNK_SIZE - 1, meta.fileSize - 1);
-                
+
                 try {
                     const response = await fetch(`/download/${fileId}/`, {
                         headers: { 'Range': `bytes=${start}-${end}` },
                         signal: activeDownloads[fileId].controller.signal
                     });
-                    
+
                     if (!response.ok && response.status !== 206) throw new Error('Fetch failed');
-                    
+
                     const blob = await response.blob();
                     await saveChunk(fileId, chunkIndex, blob);
-                    
+
                     downloadedBytes += blob.size;
                     chunkIndex++;
-                    
+
                     meta.downloadedBytes = downloadedBytes;
                     await saveMetadata(meta);
                     updateDownloadProgress(fileId, downloadedBytes, meta.fileSize);
@@ -467,7 +958,7 @@
                     }
                 }
             }
-            
+
             if (downloadedBytes >= meta.fileSize && !activeDownloads[fileId]?.paused) {
                 meta.status = 'completed';
                 await saveMetadata(meta);
@@ -498,7 +989,7 @@
             await deleteDownloadData(fileId);
             const el = document.getElementById(`dl-${fileId}`);
             if (el) el.remove();
-            
+
             const container = document.getElementById('downloadsContainer');
             if (container.children.length === 0) document.getElementById('downloadsCard').style.display = 'none';
         }
@@ -510,20 +1001,20 @@
                 const chunk = await getChunk(fileId, i);
                 if (chunk) chunks.push(chunk);
             }
-            
+
             const finalBlob = new Blob(chunks);
             const url = URL.createObjectURL(finalBlob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            
+
             URL.revokeObjectURL(url);
             await deleteDownloadData(fileId);
-            
+
             const el = document.getElementById(`dl-${fileId}`);
             if (el) {
                 el.innerHTML = `<div style="padding: 10px; font-size: 13px; background-color: rgba(76, 175, 80, 0.1); color: #4caf50; border-radius: 4px; border: 1px solid #4caf50;"><strong>${fileName}</strong> Complete!</div>`;
@@ -544,7 +1035,7 @@
             if (document.getElementById(`dl-${fileId}`)) return;
             const container = document.getElementById('downloadsContainer');
             const percent = Math.round((downloadedBytes / fileSize) * 100) || 0;
-            
+
             const div = document.createElement('div');
             div.id = `dl-${fileId}`;
             div.className = 'file-item';
@@ -553,7 +1044,7 @@
             div.style.gap = '8px';
             div.style.padding = '12px';
             div.style.border = '1px solid var(--border-color)';
-            
+
             div.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="file-name" style="max-width: 180px;">${fileName}</div>
@@ -627,4 +1118,5 @@
         }
     </script>
 </body>
+
 </html>
