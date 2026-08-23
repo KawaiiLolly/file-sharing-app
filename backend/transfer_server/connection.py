@@ -72,7 +72,8 @@ class TransferSession:
                 await self.bridge.update_transfer_state(self.file_id, self.user, self.state.name, 
                     self.chunk_manager.total_bytes_received() if self.chunk_manager else 0)
                 if self.state == TransferState.COMPLETE and self.action == 'upload':
-                    await self.bridge.finalize_upload(self.file_id, self.checksum_verifier.get_hexdigest())
+                    final_hash = getattr(self, 'final_checksum', self.checksum_verifier.get_hexdigest())
+                    await self.bridge.finalize_upload(self.file_id, final_hash)
 
     async def _run_state_machine(self):
         while self.state not in (TransferState.COMPLETE, TransferState.DISCONNECTED, TransferState.ERROR):
@@ -123,10 +124,17 @@ class TransferSession:
             self.file_id = resp["file_id"]
             self.chunk_manager = ChunkManager(self.file_size)
             
+            manifest_path = self.get_full_path() + '.manifest'
+            self.chunk_manager.load_from_manifest(manifest_path)
+            
             missing = self.chunk_manager.get_missing_intervals()
             await self.send_json({"status": "ready", "missing_intervals": missing})
             
-            self.file_handle = open(self.get_full_path(), "ab")
+            file_path = self.get_full_path()
+            if os.path.exists(file_path):
+                self.file_handle = open(file_path, "r+b")
+            else:
+                self.file_handle = open(file_path, "w+b")
             self.state = TransferState.TRANSFERRING
             
         elif self.action == "download":
@@ -174,6 +182,9 @@ class TransferSession:
         
         self.chunk_manager.add_chunk(start, start + length)
         self.checksum_verifier.update(data)
+        
+        manifest_path = self.get_full_path() + '.manifest'
+        self.chunk_manager.save_to_manifest(manifest_path)
         
         await self.send_json({"status": "ack", "start": start, "length": length})
         
@@ -225,10 +236,21 @@ class TransferSession:
 
     async def _do_verification(self):
         if self.chunk_manager.is_complete():
-            actual_checksum = self.checksum_verifier.get_hexdigest()
+            import hashlib
+            hasher = hashlib.sha256()
+            self.file_handle.seek(0)
+            for chunk in iter(lambda: self.file_handle.read(4096 * 1024), b""):
+                hasher.update(chunk)
+            actual_checksum = hasher.hexdigest()
+            self.final_checksum = actual_checksum
+            
             if actual_checksum == self.expected_checksum:
                 await self.send_json({"status": "success", "message": "File completely received and verified."})
                 self.state = TransferState.COMPLETE
+                
+                manifest_path = self.get_full_path() + '.manifest'
+                if os.path.exists(manifest_path):
+                    os.remove(manifest_path)
             else:
                 await self.send_json({"status": "error", "message": "Checksum mismatch."})
                 self.state = TransferState.ERROR

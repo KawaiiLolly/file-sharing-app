@@ -43,3 +43,16 @@ class ChunkManager:
 
     def total_bytes_received(self):
         return sum(end - start for start, end in self.received_intervals)
+
+    def save_to_manifest(self, filepath):
+        import json
+        with open(filepath, 'w') as f:
+            json.dump(self.received_intervals, f)
+
+    def load_from_manifest(self, filepath):
+        import json
+        import os
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+                self.received_intervals = [tuple(x) for x in data]

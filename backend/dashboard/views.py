@@ -137,63 +137,107 @@ def file_preview_view(request, file_id):
     return FileResponse(open(file_path, 'rb'))
 
 @login_required
-def web_upload_view(request):
+def api_upload_init(request):
     from django.http import JsonResponse
     from bridge.ipc import DjangoBridge
-    import hashlib
     from asgiref.sync import async_to_sync
+    import json
     import os
-    
+
     if request.method == 'POST':
-        files = request.FILES.getlist('file')
-        if not files:
-            return JsonResponse({"status": "error", "message": "No files uploaded."}, status=400)
-            
-        visibility = request.POST.get('visibility', File.Visibility.PRIVATE)
-        
-        uploaded_count = 0
-        errors = []
-        
-        for uploaded_file in files:
-            # webkitdirectory paths include slashes (e.g., folder/file.txt).
-            # We want to keep the original name or just the basename.
-            # Using the full path as the original_name preserves the directory structure conceptually.
-            original_name = uploaded_file.name
-            file_size = uploaded_file.size
-            
+        try:
+            data = json.loads(request.body)
+            filename = data.get('filename')
+            file_size = data.get('file_size')
+            visibility = data.get('visibility', File.Visibility.PRIVATE)
+
             resp = async_to_sync(DjangoBridge.initialize_upload)(
-                request.user.username, original_name, file_size, visibility
+                request.user.username, filename, file_size, visibility
             )
             
             if "error" in resp:
-                errors.append(f"{original_name}: {resp['error']}")
-                continue
+                return JsonResponse(resp, status=400)
                 
-            stored_name = resp["stored_name"]
             file_id = resp["file_id"]
+            stored_name = resp["stored_name"]
             
-            # Save file to disk
-            file_path = os.path.join(settings.UPLOADS_DIR, stored_name)
-            hasher = hashlib.sha256()
-            with open(file_path, 'wb+') as destination:
-                for chunk in uploaded_file.chunks():
-                    destination.write(chunk)
-                    hasher.update(chunk)
-            
-            # Finalize upload state
+            # Immediately create or update the transfer state so that it is persisted
+            # and can be found by initialize_upload if the server crashes.
             async_to_sync(DjangoBridge.update_transfer_state)(
-                file_id, request.user.username, 'COMPLETE', file_size
+                file_id, request.user.username, 'TRANSFERRING', 0
             )
-            async_to_sync(DjangoBridge.finalize_upload)(
-                file_id, hasher.hexdigest()
-            )
-            uploaded_count += 1
             
-        if errors and uploaded_count == 0:
-            return JsonResponse({"status": "error", "message": "\n".join(errors)}, status=400)
-        elif errors:
-            return JsonResponse({"status": "success", "message": f"Uploaded {uploaded_count} files, but some failed:\n" + "\n".join(errors)})
-            
-        return JsonResponse({"status": "success", "message": f"Successfully uploaded {uploaded_count} file(s)."})
+            file_path = os.path.join(settings.UPLOADS_DIR, stored_name)
+            uploaded_bytes = 0
+            if os.path.exists(file_path):
+                uploaded_bytes = os.path.getsize(file_path)
+                
+            return JsonResponse({
+                "status": "success",
+                "file_id": file_id,
+                "uploaded_bytes": uploaded_bytes
+            })
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    return JsonResponse({"status": "error", "message": "Invalid method."}, status=405)
+
+@login_required
+def api_upload_chunk(request):
+    from django.http import JsonResponse
+    import os
+    
+    if request.method == 'POST':
+        file_id = request.POST.get('file_id')
+        offset = int(request.POST.get('offset', 0))
+        chunk = request.FILES.get('chunk')
         
+        if not file_id or chunk is None:
+            return JsonResponse({"status": "error", "message": "Missing file_id or chunk data"}, status=400)
+            
+        file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+        file_path = os.path.join(settings.UPLOADS_DIR, file_obj.stored_name)
+        
+        mode = 'r+b' if os.path.exists(file_path) else 'w+b'
+        with open(file_path, mode) as f:
+            f.seek(offset)
+            f.write(chunk.read())
+            
+        return JsonResponse({"status": "success"})
+    return JsonResponse({"status": "error", "message": "Invalid method."}, status=405)
+
+@login_required
+def api_upload_finalize(request):
+    from django.http import JsonResponse
+    from bridge.ipc import DjangoBridge
+    from asgiref.sync import async_to_sync
+    import json
+    import os
+    import hashlib
+    
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        file_id = data.get('file_id')
+        
+        if not file_id:
+            return JsonResponse({"status": "error", "message": "Missing file_id"}, status=400)
+            
+        file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+        file_path = os.path.join(settings.UPLOADS_DIR, file_obj.stored_name)
+        
+        if not os.path.exists(file_path):
+            return JsonResponse({"status": "error", "message": "File not found on server"}, status=404)
+            
+        hasher = hashlib.sha256()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096 * 1024), b""):
+                hasher.update(chunk)
+                
+        async_to_sync(DjangoBridge.update_transfer_state)(
+            file_id, request.user.username, 'COMPLETE', file_obj.size
+        )
+        async_to_sync(DjangoBridge.finalize_upload)(
+            file_id, hasher.hexdigest()
+        )
+        
+        return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error", "message": "Invalid method."}, status=405)

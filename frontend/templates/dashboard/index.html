@@ -701,7 +701,7 @@
 
         <div class="panel-card">
             <div class="panel-title">Upload file</div>
-            <form id="uploadForm" action="{% url 'web_upload' %}" method="post" enctype="multipart/form-data">
+            <form id="uploadForm" action="#" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
                 <div class="dropzone" id="dropzone">
@@ -791,77 +791,135 @@
         // ==========================================
         // UPLOAD LOGIC (With Cancel/Rollback)
         // ==========================================
-        let currentUploadXhr = null;
-
-        document.getElementById('uploadForm').addEventListener('submit', function (e) {
+        let activeUploads = {};
+        
+        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-
             const form = this;
             const submitBtn = document.getElementById('uploadBtn');
-            const progressContainer = document.getElementById('uploadProgressContainer');
-            const progressBar = document.getElementById('uploadProgressBar');
-            const progressText = document.getElementById('uploadPercent');
-
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const visibility = form.querySelector('[name=visibility]').value;
+            
+            const fileInput = document.getElementById('fileInput');
+            const folderInput = document.getElementById('folderInput');
+            const files = fileInput.files.length > 0 ? fileInput.files : folderInput.files;
+            
+            if (files.length === 0) {
+                alert("Please select files to upload");
+                return;
+            }
+            
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.5';
-            progressContainer.style.display = 'block';
-
-            const formData = new FormData(form);
-            const xhr = new XMLHttpRequest();
-            currentUploadXhr = xhr;
-
-            document.getElementById('cancelUploadBtn').onclick = function () {
-                if (currentUploadXhr) currentUploadXhr.abort();
-            };
-
-            xhr.open('POST', form.action, true);
-
-            xhr.upload.addEventListener('progress', function (e) {
-                if (e.lengthComputable) {
-                    const percentComplete = Math.round((e.loaded / e.total) * 100);
-                    progressBar.style.width = percentComplete + '%';
-                    progressText.textContent = percentComplete + '%';
-                }
-            });
-
-            xhr.onload = function () {
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (xhr.status === 200) {
-                        alert("Success: " + response.message);
-                        window.location.reload();
-                    } else {
-                        alert("Upload failed: " + (response.message || "Unknown error."));
-                        resetForm();
-                    }
-                } catch (err) {
-                    alert("Upload failed with server error status " + xhr.status);
-                    resetForm();
-                }
-            };
-
-            xhr.onabort = function () {
-                alert("Upload was canceled. No files were saved.");
-                resetForm();
-            };
-
-            xhr.onerror = function () {
-                alert("An error occurred while uploading. Please check your network connection.");
-                resetForm();
-            };
-
-            xhr.send(formData);
-
-            function resetForm() {
-                submitBtn.disabled = false;
-                submitBtn.style.opacity = '1';
-                progressBar.style.width = '0%';
-                progressContainer.style.display = 'none';
-                currentUploadXhr = null;
-                document.querySelector('.dropzone-text').innerText = "Drag and drop file to upload";
-                form.reset();
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                await startChunkedUpload(file, visibility, csrfToken);
             }
+            
+            form.reset();
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            document.querySelector('.dropzone-text').innerText = "Drag and drop file to upload";
         });
+        
+        async function startChunkedUpload(file, visibility, csrfToken) {
+            document.getElementById('uploadProgressContainer').style.display = 'block';
+            const progressContainer = document.getElementById('uploadProgressContainer');
+            
+            // UI elements
+            const fileNameEl = document.getElementById('uploadingFileName');
+            const percentEl = document.getElementById('uploadPercent');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const cancelBtn = document.getElementById('cancelUploadBtn');
+            
+            fileNameEl.textContent = file.name;
+            percentEl.textContent = "0%";
+            progressBar.style.width = "0%";
+            
+            try {
+                // Initialize
+                const initRes = await fetch('/api/upload/init/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        filename: file.name,
+                        file_size: file.size,
+                        visibility: visibility
+                    })
+                });
+                
+                const initData = await initRes.json();
+                if (initData.status !== 'success') throw new Error(initData.message);
+                
+                const fileId = initData.file_id;
+                let uploadedBytes = initData.uploaded_bytes || 0;
+                
+                const controller = new AbortController();
+                activeUploads[fileId] = { controller: controller, paused: false };
+                
+                cancelBtn.onclick = () => {
+                    if (activeUploads[fileId]) {
+                        activeUploads[fileId].controller.abort();
+                        activeUploads[fileId].paused = true;
+                        fileNameEl.textContent = "Upload Paused";
+                    }
+                };
+                
+                const chunkSize = 5 * 1024 * 1024;
+                
+                while (uploadedBytes < file.size && !activeUploads[fileId].paused) {
+                    const chunk = file.slice(uploadedBytes, uploadedBytes + chunkSize);
+                    const formData = new FormData();
+                    formData.append('file_id', fileId);
+                    formData.append('offset', uploadedBytes);
+                    formData.append('chunk', chunk);
+                    
+                    const chunkRes = await fetch('/api/upload/chunk/', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                        body: formData,
+                        signal: activeUploads[fileId].controller.signal
+                    });
+                    
+                    if (!chunkRes.ok) throw new Error("Chunk upload failed");
+                    
+                    uploadedBytes += chunk.size;
+                    const percent = Math.round((uploadedBytes / file.size) * 100);
+                    progressBar.style.width = percent + '%';
+                    percentEl.textContent = percent + '%';
+                }
+                
+                if (uploadedBytes >= file.size && !activeUploads[fileId].paused) {
+                    percentEl.textContent = "Finalizing...";
+                    const finRes = await fetch('/api/upload/finalize/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ file_id: fileId })
+                    });
+                    const finData = await finRes.json();
+                    if (finData.status === 'success') {
+                        percentEl.textContent = "Done!";
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        throw new Error(finData.message);
+                    }
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    console.log('Upload aborted/paused');
+                } else {
+                    alert("Upload error: " + e.message);
+                    percentEl.textContent = "Error";
+                }
+            }
+        }
 
         // ==========================================
         // DOWNLOAD MANAGER LOGIC (IndexedDB & Chunks)
@@ -938,7 +996,21 @@
 
                     if (!response.ok && response.status !== 206) throw new Error('Fetch failed');
 
-                    const blob = await response.blob();
+                    // Read chunk progressively for smooth progress bar
+                    const reader = response.body.getReader();
+                    let receivedLength = 0;
+                    let chunks = [];
+
+                    while(true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        chunks.push(value);
+                        receivedLength += value.length;
+                        // Smooth UI update
+                        updateDownloadProgress(fileId, downloadedBytes + receivedLength, meta.fileSize);
+                    }
+                    
+                    const blob = new Blob(chunks);
                     await saveChunk(fileId, chunkIndex, blob);
 
                     downloadedBytes += blob.size;
@@ -946,6 +1018,8 @@
 
                     meta.downloadedBytes = downloadedBytes;
                     await saveMetadata(meta);
+                    
+                    // Final update for this chunk to ensure exact byte match in UI
                     updateDownloadProgress(fileId, downloadedBytes, meta.fileSize);
                 } catch (err) {
                     if (err.name === 'AbortError') break;
