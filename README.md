@@ -45,22 +45,47 @@ The dashboard features a real-time, segmented storage usage indicator.
 
 ```text
 file-sharing/
-├── bridge/                 # IPC communication between Django and Transfer Server
-├── control_plane/          # Core Django project settings & configuration
-├── dashboard/              # Main UI views, templates, and file categorization logic
-├── files/                  # Django models (File, FileTransfer, ServerNode)
-├── policies/               # Granular access control and permission engine
-├── static/                 # Modular, cached CSS and JS assets
-│   ├── css/                # auth.css, dashboard.css
-│   └── js/                 # auth.js, dashboard.js
-├── storage/                # Physical disk storage for uploaded files
-├── transfer_server/        # Multithreaded TCP socket server for raw data transfer
-└── users/                  # Custom Auth, Activity Logging Middleware & Models
+├── backend/
+│   ├── bridge/                 # IPC communication between Django and Transfer Server
+│   ├── control_plane/          # Core Django project settings & configuration
+│   ├── dashboard/              # Main UI views and file categorization logic
+│   ├── files/                  # Django models (File, FileTransfer, ServerNode)
+│   ├── policies/               # Granular access control and permission engine
+│   ├── storage/                # Physical disk storage for uploaded files
+│   ├── transfer_server/        # Multithreaded TCP socket server for raw data transfer
+│   └── users/                  # Custom Auth, Activity Logging Middleware & Models
+└── frontend/
+    ├── static/                 # Modular, cached CSS and JS assets
+    │   ├── css/                # auth.css, dashboard.css
+    │   └── js/                 # auth.js, dashboard.js
+    └── templates/              # HTML templates
+```
+
+## 🗺️ Architecture Workflow
+
+```mermaid
+graph TD
+    Client[Browser / Client] -->|HTTP / HTML / CSS / JS| Frontend[Frontend layer]
+    Client -->|HTTP API / Auth| ControlPlane[Control Plane - Django]
+    Client -->|TCP Sockets| TransferServer[Transfer Server]
+    
+    ControlPlane <-->|IPC Bridge| TransferServer
+    ControlPlane -->|Read / Write| DB[(SQLite Database)]
+    TransferServer -->|Read / Write| Storage[Disk Storage]
+    
+    classDef frontend fill:#3b82f6,stroke:#1e40af,stroke-width:2px,color:#fff;
+    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef db fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
+    
+    class Frontend frontend;
+    class ControlPlane,TransferServer backend;
+    class DB db;
 ```
 
 ## 🚀 Getting Started
 
-1. **Install Dependencies**: `pip install -r requirements.txt`
-2. **Run Migrations**: `python manage.py migrate`
-3. **Start the Development Server**: `python manage.py runserver`
-4. Access the platform at `http://localhost:8000`.
+1. **Navigate to the Backend Directory**: `cd backend`
+2. **Install Dependencies**: `pip install -r requirements.txt`
+3. **Run Migrations**: `python manage.py migrate`
+4. **Start the Development Server**: `python manage.py runserver`
+5. Access the platform at `http://localhost:8000`.

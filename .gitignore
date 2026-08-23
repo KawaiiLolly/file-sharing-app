@@ -1,33 +1,39 @@
 # Python and Django
 *.pyc
 *~
-__pycache__
+__pycache__/
 *.pyo
 *.pyd
 .Python
+
+# Virtual environments
 env/
 venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.env
-.venv
+.venv/
 env.bak/
 venv.bak/
 
-# Django stuff
+# Python package / pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables
+.env
+
+# Django
 db.sqlite3
 db2.sqlite3
 *.log
 local_settings.py
 
 # File sharing specific storage
-/storage/*
-!/storage/.gitkeep
+backend/storage/
+storage/*
+!storage/.gitkeep
 
 # IDEs and Editors
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 .DS_Store
