@@ -70,7 +70,7 @@ graph TD
     Client -->|TCP Sockets| TransferServer[Transfer Server]
     
     ControlPlane <-->|IPC Bridge| TransferServer
-    ControlPlane -->|Read / Write| DB[(SQLite Database)]
+    ControlPlane -->|Read / Write| DB[(Postgres Database)]
     TransferServer -->|Read / Write| Storage[Disk Storage]
     
     classDef frontend fill:#3b82f6,stroke:#1e40af,stroke-width:2px,color:#fff;
