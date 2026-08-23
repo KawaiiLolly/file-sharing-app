@@ -1,43 +1,43 @@
 # High-Performance File Sharing Platform
 
-A robust, full-stack file sharing platform engineered for large-scale file transfers, fine-grained access control, and a state-of-the-art interactive user interface. This project demonstrates advanced software engineering principles, moving beyond basic CRUD applications to incorporate systems-level programming concepts, resilient networking, and highly optimized frontend implementations.
+A full-stack file sharing platform for large file transfers, combining a Django control plane, an event-driven async transfer protocol, and a resilient chunked-transfer client — built to survive crashes, restarts, and dropped connections without losing progress.
 
 ---
 
 ## Architecture Overview
 
-The system is designed with a decoupled, event-driven architecture, separating the metadata management from the actual heavy-lifting of file transfers.
+The system separates metadata/access management from file transfer, and supports two independent transfer paths:
 
-1. **Control Plane (Django)**: The central nervous system of the application. It handles user authentication, session management, file metadata (size, checksums, visibility), access control policies, and system-wide activity logging. 
-2. **Transfer Server (Python Socket/TCP)**: A multithreaded, systems-level transfer server designed specifically for high-speed, chunked file transfers. It bypasses standard HTTP overhead for raw performance, utilizing custom thread pools and chunk managers.
-3. **Bridge & IPC**: The Control Plane and Transfer Server communicate via an Inter-Process Communication (IPC) bridge (`bridge/ipc.py`). This allows Django (synchronous) to safely interact with the asynchronous/multithreaded Transfer Server using `asgiref` (`sync_to_async`).
-4. **Client-Side Engine (Vanilla JS + IndexedDB)**: A completely custom, lightweight frontend engine built without the bloat of frameworks like React or Angular. It manages local chunk assembly, resumability state, and dynamic rendering.
+1. **Control Plane (Django)** — Handles authentication, session management, file metadata (size, checksums, visibility), access policies, and activity logging. Also serves web-based downloads directly via HTTP Range requests.
+2. **Async Transfer Server (Python `asyncio`, raw TCP)** — An event-driven socket server (`asyncio.start_server`) built for high-throughput chunked transfers outside the HTTP stack, using a bounded `AsyncWorkerPool` to cap concurrency and apply backpressure (`SERVER_BUSY`) under load. Exercised via a dedicated TCP client protocol.
+3. **Bridge & IPC** — Connects the Django control plane to the async transfer server via `bridge/ipc.py`, letting Django's synchronous views safely call into async code through `asgiref` (`sync_to_async`).
+4. **Client-Side Engine (Vanilla JS + IndexedDB)** — A dependency-free frontend managing chunked uploads/downloads, resumable state, and progress UI.
 
 ---
 
 ## Key Implementation Techniques
 
-### 1. Resumable, Chunk-Based Transfers (Client-Side)
-To handle gigabyte-plus file sizes without exhausting memory or failing on dropped connections, the frontend implements a sophisticated chunking engine:
-- **HTTP Range Requests**: The client requests files in 5MB chunks using HTTP `Range` headers. 
-- **IndexedDB Caching**: As chunks arrive, they are immediately flushed to the browser's local IndexedDB. This ensures that if the browser crashes or the user pauses the download, the exact byte progress is saved locally.
-- **Blob Stitching**: Once all chunks are verified in IndexedDB, the JavaScript `Blob` API is used to rapidly stitch the chunks together in memory and trigger a native browser save dialog, subsequently purging the IndexedDB cache.
+### 1. Crash-Resilient Uploads (Server-Persisted)
+Upload progress is persisted to disk, not just held in memory, on both transfer paths:
+- A `ChunkManager` tracks received byte ranges, merging overlapping/out-of-order intervals into a canonical list.
+- Progress is written to a `.manifest` file after every chunk. On reconnect — including after a full server restart — the manifest is reloaded, missing byte ranges are recomputed, and the client is told exactly what's still needed (`missing_intervals`).
+- On completion, the full file is re-hashed (SHA-256) and checked against the client's checksum before the manifest is deleted, so even a corrupted partial write is caught at verification rather than failing silently.
 
-### 2. High-Performance UI / UX Architecture
-The user interface avoids heavy CSS frameworks (like Bootstrap or Tailwind) in favor of a highly optimized, raw CSS3 implementation.
-- **Zero-Dependency Styling**: The entire UI is built on native CSS custom properties (variables), Flexbox, and CSS Grid.
-- **Hardware-Accelerated Animations**: Complex UI elements—such as the mouse-tracking tech gradients and 3D rotating grids on the authentication pages—are achieved using native CSS `transform` and `@keyframes`, ensuring they run on the GPU at 60fps without freezing the main JavaScript thread.
-- **Modular Static Assets**: CSS and JS are logically separated into `auth.css`, `dashboard.css`, etc., allowing for aggressive browser caching.
+### 2. Resumable Downloads (Client-Persisted, HTTP Range-Based)
+- The web client fetches files in 5MB chunks using HTTP `Range` requests; Django's `FileResponse` serves the requested byte range natively (`206 Partial Content`).
+- Downloaded bytes are tracked in IndexedDB and updated after each completed chunk — surviving not just pauses but full browser crashes and page reloads. On reopening the app, any incomplete download is detected and offered for resume from the exact last chunk, not from zero.
+- Completed chunks are stitched into a final `Blob` and saved once the full file is verified present.
 
-### 3. Comprehensive Activity Logging
-A custom Django Middleware (`users/middleware.py`) captures all requests in real-time.
-- **Audit Trails**: Every action (viewing a page, downloading a file, failed login attempts) is captured along with the user's IP address, HTTP method, and timestamp.
-- **Noise Filtering**: The middleware intelligently filters out static asset requests (CSS/JS/images) to prevent database bloat, ensuring the `ActivityLog` table remains lean and queryable for security audits.
+### 3. Event-Driven Transfer Protocol (TCP)
+- A separate, raw-socket transfer protocol (`transfer_server/`) supports the same upload/download resumability model over a custom async TCP protocol, independent of HTTP — useful for high-throughput transfers outside the browser. Validated via a dedicated test client (`test_client.py`).
+- Built on `asyncio` coroutines rather than OS threads, allowing many concurrent connections to be handled on a single event loop via non-blocking I/O, with an `AsyncWorkerPool` providing admission control under load.
 
-### 4. Dynamic Storage Visualization
-The dashboard features a real-time, segmented storage usage indicator.
-- **On-the-fly Categorization**: Files are parsed by extension and grouped into categories (Video, Photo, Document, etc.).
-- **Dynamic CSS Injection**: The backend calculates precise storage percentages and injects them directly into the inline styles of the flex-basis segments, creating a flawless, responsive progress bar without needing a charting library like Chart.js.
+### 4. Access Control & Activity Logging
+- The `policies/` app enforces per-file visibility and permission checks on upload/download.
+- A custom Django middleware (`users/middleware.py`) logs every request — page views, downloads, failed logins — with IP, method, and timestamp, filtering out static-asset noise to keep the audit log queryable.
+
+### 5. Storage Visualization
+- The dashboard computes real-time storage usage by file category and renders a segmented usage bar without a charting library.
 
 ---
 
@@ -46,19 +46,17 @@ The dashboard features a real-time, segmented storage usage indicator.
 ```text
 file-sharing/
 ├── backend/
-│   ├── bridge/                 # IPC communication between Django and Transfer Server
-│   ├── control_plane/          # Core Django project settings & configuration
-│   ├── dashboard/              # Main UI views and file categorization logic
-│   ├── files/                  # Django models (File, FileTransfer, ServerNode)
-│   ├── policies/               # Granular access control and permission engine
-│   ├── storage/                # Physical disk storage for uploaded files
-│   ├── transfer_server/        # Multithreaded TCP socket server for raw data transfer
-│   └── users/                  # Custom Auth, Activity Logging Middleware & Models
+│   ├── bridge/                 # IPC between Django and the async Transfer Server
+│   ├── control_plane/          # Django project settings & configuration
+│   ├── dashboard/               # UI views, HTTP Range downloads, storage stats
+│   ├── files/                   # Django models (File, FileTransfer, ServerNode)
+│   ├── policies/                # Access control / permission enforcement
+│   ├── storage/                 # Physical disk storage for uploaded files
+│   ├── transfer_server/         # Async TCP transfer protocol (chunking, checksums, manifests)
+│   └── users/                   # Custom Auth, Activity Logging Middleware & Models
 └── frontend/
-    ├── static/                 # Modular, cached CSS and JS assets
-    │   ├── css/                # auth.css, dashboard.css
-    │   └── js/                 # auth.js, dashboard.js
-    └── templates/              # HTML templates
+    ├── static/                  # CSS/JS assets
+    └── templates/                # Dashboard, auth pages (chunked upload/download logic inline)
 ```
 
 ## Architecture Workflow
