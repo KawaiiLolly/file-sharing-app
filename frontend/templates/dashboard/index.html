@@ -1,4 +1,4 @@
-{% load storage_tags %}
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -572,26 +572,30 @@
             </div>
 
             <div class="storage-widget">
-                {% get_storage_stats as stats %}
                 <div class="storage-widget-header">
                     <span>{{ request.get_host }}</span>
-                    <span>{{ total_size|filesizeformat }} of {{ stats.disk_total_str }} Platform Usage</span>
+                    <span>Server Status</span>
                 </div>
-                <div class="storage-bar-container">
-                    {% for name, data in sorted_categories %}
-                    {% if data.percentage > 0 %}
-                    <div class="storage-segment"
-                        style="width: {{ data.percentage }}%; background-color: {{ data.color }};"
-                        title="{{ name }}: {{ data.percentage|floatformat:1 }}%"></div>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    {% if nodes %}
+                        {% for node in nodes %}
+                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: {% if node.status == 'online' %}#4caf50{% else %}#f44336{% endif %}; box-shadow: 0 0 5px {% if node.status == 'online' %}#4caf50{% else %}#f44336{% endif %};"></span>
+                                    <span style="font-size: 14px; font-weight: 500;">{{ node.hostname }}</span>
+                                </div>
+                                <span style="font-size: 12px; color: var(--text-secondary); text-transform: capitalize;">{{ node.status }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background-color: #4caf50; box-shadow: 0 0 5px #4caf50;"></span>
+                                <span style="font-size: 14px; font-weight: 500;">Main Node</span>
+                            </div>
+                            <span style="font-size: 12px; color: var(--text-secondary);">Online</span>
+                        </div>
                     {% endif %}
-                    {% endfor %}
-                    <div class="storage-segment" style="flex: 1; background-color: #333;"></div>
-                </div>
-                <div class="storage-legend">
-                    {% for name, data in categories.items %}
-                    <div class="legend-item" title="{{ data.size|filesizeformat }}"><span class="legend-dot"
-                            style="background: {{ data.color }};"></span> {{ name }}</div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
